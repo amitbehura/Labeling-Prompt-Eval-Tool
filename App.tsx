@@ -32,6 +32,12 @@ const App: React.FC = () => {
     setUserApiKey(key);
     localStorage.setItem('gemini_api_key', key);
   };
+
+  const handleImportData = (data: { projects: Project[], datasets: Dataset[], evaluations: Evaluation[] }) => {
+    if (data.projects) setProjects(data.projects);
+    if (data.datasets) setDatasets(data.datasets);
+    if (data.evaluations) setEvaluations(data.evaluations);
+  };
   
   // Selection State
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -164,7 +170,16 @@ const App: React.FC = () => {
       case 'documentation':
         return <DocumentationView />;
       case 'settings':
-        return <SettingsView apiKey={userApiKey} onSaveApiKey={handleSaveApiKey} />;
+        return (
+            <SettingsView 
+                apiKey={userApiKey} 
+                onSaveApiKey={handleSaveApiKey}
+                projects={projects}
+                datasets={datasets}
+                evaluations={evaluations}
+                onImportData={handleImportData}
+            />
+        );
       default:
         return (
           <div className="flex items-center justify-center h-full text-neutral-400">

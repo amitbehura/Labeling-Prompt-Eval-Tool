@@ -1,14 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Key, Save, Check, Shield, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Key, Save, Check, Shield, AlertCircle, Download, Upload, FileJson, Database } from 'lucide-react';
+import { Project, Dataset, Evaluation } from '../types';
 
 interface SettingsViewProps {
   apiKey: string;
   onSaveApiKey: (key: string) => void;
+  projects: Project[];
+  datasets: Dataset[];
+  evaluations: Evaluation[];
+  onImportData: (data: { projects: Project[], datasets: Dataset[], evaluations: Evaluation[] }) => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ apiKey, onSaveApiKey }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ 
+  apiKey, 
+  onSaveApiKey, 
+  projects, 
+  datasets, 
+  evaluations, 
+  onImportData 
+}) => {
   const [inputValue, setInputValue] = useState(apiKey);
   const [isSaved, setIsSaved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setInputValue(apiKey);
@@ -18,6 +31,48 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ apiKey, onSaveApiKey
     onSaveApiKey(inputValue);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
+  };
+
+  const handleExport = () => {
+    const data = {
+      projects,
+      datasets,
+      evaluations,
+      exportDate: new Date().toISOString(),
+      version: "1.0"
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `labeling-eval-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (json.projects && Array.isArray(json.projects)) {
+             onImportData(json);
+             alert(`Successfully imported ${json.projects.length} projects, ${json.datasets?.length || 0} datasets, and ${json.evaluations?.length || 0} evaluations.`);
+        } else {
+            alert("Invalid backup file format. Could not find project data.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Failed to parse JSON file.");
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -91,6 +146,63 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ apiKey, onSaveApiKey
                                 Clear Key
                              </button>
                         )}
+                    </div>
+                </div>
+            </section>
+            
+            {/* Data Management Section */}
+            <section className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-8 shadow-sm">
+                <div className="flex items-start gap-4 mb-6">
+                    <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center text-neutral-500 shrink-0">
+                        <Database size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold">Data Management</h2>
+                        <p className="text-sm text-neutral-500 mt-1">
+                            Export your entire workspace (Projects, Datasets, Evaluations) to a JSON file for backup or transfer.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button 
+                        onClick={handleExport}
+                        className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-dashed border-neutral-200 dark:border-neutral-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all group"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Download size={20} />
+                        </div>
+                        <div className="text-center">
+                            <div className="font-bold text-sm">Export Data</div>
+                            <div className="text-xs text-neutral-400 mt-1">Save JSON snapshot</div>
+                        </div>
+                    </button>
+
+                    <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-dashed border-neutral-200 dark:border-neutral-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/10 transition-all group"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Upload size={20} />
+                        </div>
+                        <div className="text-center">
+                            <div className="font-bold text-sm">Import Data</div>
+                            <div className="text-xs text-neutral-400 mt-1">Restore from JSON</div>
+                        </div>
+                        <input 
+                            type="file" 
+                            accept=".json"
+                            ref={fileInputRef}
+                            className="hidden"
+                            onChange={handleImportFile}
+                        />
+                    </button>
+                </div>
+                
+                <div className="mt-4 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg flex items-start gap-3">
+                    <FileJson size={16} className="text-neutral-500 mt-0.5 shrink-0" />
+                    <div className="text-xs text-neutral-500">
+                        <strong>Current State:</strong> {projects.length} Projects, {datasets.length} Datasets, {evaluations.length} Evaluation Runs.
                     </div>
                 </div>
             </section>
