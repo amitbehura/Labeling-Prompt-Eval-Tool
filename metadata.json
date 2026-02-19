@@ -1,0 +1,5 @@
+{
+  "name": "Labeling Prompt Eval",
+  "description": "A high-precision prompt evaluation tool with a monochrome aesthetic, featuring Gemini integration for latency, reasoning, and exact-match testing.",
+  "requestFramePermissions": []
+}
